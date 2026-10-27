@@ -258,8 +258,7 @@ def render_markdown(summary: dict, execution: dict, output: Path, hardware: Path
                 "",
                 "## Recorded measurements (not gating)",
                 "",
-                "These quantify behaviour rather than test CPU/GPU equivalence, so they are"
-                " reported without deciding the outcome.",
+                "These are reported without a verdict; the last column says why.",
                 "",
                 "| Method group | Measurement | Observed | Why it is not a criterion |",
                 "| --- | --- | ---: | --- |",

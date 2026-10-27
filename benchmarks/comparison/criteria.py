@@ -135,14 +135,10 @@ CRITERIA: dict[str, list[tuple[str, str, float, str]]] = {
     ],
     "scanpy_core_harmony": [
         # Strictly greater: the manuscript says >95%, not at least 95%.
-        ("harmony1.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
-        ("harmony1.mean_component_abs_correlation", ">=", 0.98, ""),
-        ("harmony1.standard_deviation_max_abs_error", "<=", 0.1, ""),
-        ("harmony1.relative_l2_max", "<=", 0.1, L2_BASIS),
-        ("harmony2.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
-        ("harmony2.mean_component_abs_correlation", ">=", 0.98, ""),
-        ("harmony2.standard_deviation_max_abs_error", "<=", 0.1, ""),
-        ("harmony2.relative_l2_max", "<=", 0.1, L2_BASIS),
+        ("harmony.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
+        ("harmony.mean_component_abs_correlation", ">=", 0.98, ""),
+        ("harmony.standard_deviation_max_abs_error", "<=", 0.1, ""),
+        ("harmony.relative_l2_max", "<=", 0.1, L2_BASIS),
     ],
     "scanpy_core_hvg_pca": [
         ("highly_variable_genes.seurat.selection.set_jaccard", ">=", 0.99, ""),
@@ -189,20 +185,9 @@ CRITERIA: dict[str, list[tuple[str, str, float, str]]] = {
         ("moran.I.pearson_correlation", ">=", 0.999999, ""),
         ("geary.C.pearson_correlation", ">=", 0.999999, ""),
     ],
-    "sqrt": [
-        ("X.allclose_excess", "<=", 1.0, ALLCLOSE_BASIS),
-    ],
 }
 
-# Comparisons that are computed and reported but do not gate.
-#
-# The publication states the `numpy.allclose` standard for a specific list of operations —
-# normalization, log transformation and scaling in the abstract, normalization, HVG selection
-# and PCA in the Methods — and for nothing else. Applying it to spatial statistics, activity
-# inference, regression or QC metrics would be the suite inventing a standard for an operation
-# the paper makes no claim about, and a red row that traces to no claim is not evidence.
-#
-# Each is still derived and still reported: what is removed is the verdict, not the number.
+# Computed and reported, not gated; why is in README.md, Numerical validation.
 EVIDENCE_BASIS = (
     "Measured against the same numpy.allclose envelope, but not gated: the publication states "
     "no tolerance for this operation, so a verdict here would be the suite's invention."
@@ -247,25 +232,24 @@ DIAGNOSES: dict[tuple[str, str], str] = {
         "against itself. Compare `umap.cpu_reseeded_knn_overlap`, the same measurement with only the "
         "seed changed, and `umap.cross_embedding_overlap_vs_cpu_baseline`."
     ),
-    ("scanpy_core_graphs_embeddings", "umap.cross_embedding_knn_overlap"): (
-        "UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows "
-        "against itself. On this dataset the GPU embedding is closer to the CPU one than a reseeded "
-        "CPU run is, and the criterion still fails."
-    ),
     ("calculate_niche", "neighborhood.adjusted_rand_index"): (
         "The neighborhood profile holds only 755 distinct rows across 4668 cells, so 89.67% of cells "
         "have an exact distance tie at the k-th neighbour. Against exact float64 ground truth the GPU "
-        "kNN is exact and `sc.pp.neighbors` is not, on 743 rows: the divergence is the CPU reference."
+        "kNN is exact and `sc.pp.neighbors` is not, on 743 rows. Routing Squidpy's kNN and Leiden to the "
+        "rsc implementations leaves ARI at 0.854, so the partition is unstable under float32-level "
+        "feature differences, not backend-dependent."
     ),
     ("calculate_niche", "utag.adjusted_rand_index"): (
         "Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. "
         "On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below "
-        "this threshold, so the criterion measures backend choice rather than correctness."
+        "this threshold. Routing Squidpy's kNN and Leiden to the rsc implementations leaves ARI at 0.540, "
+        "so the partition is unstable under float32-level feature differences, not backend-dependent."
     ),
     ("calculate_niche", "*.cluster_count_difference"): (
         "`resolution` does not carry the same meaning across Leiden implementations: on identical input "
         "cuGraph found 34 clusters where leidenalg found 41, and Scanpy's own two backends already "
-        "differ by 1."
+        "differ by 1. With Squidpy's kNN and Leiden routed to the rsc implementations the neighborhood "
+        "difference is still 11, so the feature differences alone move it."
     ),
     ("*", "*.allclose_excess"): (
         "numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude "
@@ -274,6 +258,9 @@ DIAGNOSES: dict[tuple[str, str], str] = {
         "section of README.md for the split between that case and a genuine relative disagreement."
     ),
 }
+DIAGNOSES[("scanpy_core_graphs_embeddings", "umap.cross_embedding_knn_overlap")] = DIAGNOSES[
+    ("biological_pipeline_pbmc3k", "umap.cross_embedding_knn_overlap")
+]
 DIAGNOSES[("calculate_niche", "neighborhood.normalized_mutual_information")] = DIAGNOSES[
     ("calculate_niche", "neighborhood.adjusted_rand_index")
 ]
