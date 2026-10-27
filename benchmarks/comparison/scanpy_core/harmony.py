@@ -30,12 +30,12 @@ def run_rsc(flavor: str, **kwargs) -> np.ndarray:
     return adata.obsm["X_pca_harmony"]
 
 
-# harmony1: the stored harmonypy 0.x output; harmonypy 2.x no longer implements this algorithm.
+# harmony1: the stored R harmony output harmonypy 0.x tested against; harmonypy 2.x no longer implements it.
 capture(
     METHOD,
     "harmony1",
     reference=pd.read_csv(harmonized_path, delimiter="\t").to_numpy(),
-    candidate=run_rsc("harmony1", max_iter_harmony=20),
+    candidate=run_rsc("harmony1", max_iter_harmony=20, max_iter_clustering=20),
 )
 
 # harmony2: the rsc default, against harmonypy 2.x run now, both at their default stopping rules.
@@ -47,7 +47,7 @@ capture(METHOD, "harmony2", reference=reference, candidate=run_rsc("harmony2"))
 
 write_report(
     METHOD,
-    "Harmonypy PBMC 3,500-cell donor benchmark: harmony1 against the stored harmonypy 0.x output, "
+    "Harmonypy PBMC 3,500-cell donor benchmark: harmony1 against the stored R harmony output, "
     "harmony2 (the rsc default) against harmonypy 2.x",
     "iterative",
     [],
