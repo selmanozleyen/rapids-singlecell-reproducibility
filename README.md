@@ -8,7 +8,8 @@ TODO
 
 ## Reproducibility
 
-TODO
+Run any comparison script in `benchmarks/comparison` by its path, e.g.
+`uv run benchmarks/comparison/scale/scale.py`.
 
 ## Run time
 

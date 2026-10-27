@@ -2,6 +2,8 @@ import numpy as np
 import rapids_singlecell as rsc
 import scanpy as sc
 
+from benchmarks.comparison.constants import ASSERT_ALLCLOSE_KWARGS
+
 adata_sc = sc.datasets.pbmc3k()
 sc.pp.calculate_qc_metrics(adata_sc, inplace=True)
 sc.pp.filter_genes(adata_sc, min_cells=3)
@@ -17,4 +19,4 @@ rsc.pp.regress_out(adata_rsc, keys=["total_counts"])
 rsc.get.anndata_to_CPU(adata_rsc)
 # Due to use of parallel matrix multiplication, the results are not exactly the same as scanpy
 # 64 bit would be required to get closer results
-np.testing.assert_allclose(adata_sc.X, adata_rsc.X, rtol=1e-5, atol=1e-5)
+np.testing.assert_allclose(adata_sc.X, adata_rsc.X, **ASSERT_ALLCLOSE_KWARGS)
