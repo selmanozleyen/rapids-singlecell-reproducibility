@@ -1,12 +1,12 @@
 # CPU/GPU equivalence report
 
-Scored 2026-08-31T13:55:43.573602+00:00 from measurements taken by isolated comparison processes. Criteria come from `criteria.py` at scoring time, so a stored run can be re-scored without being re-measured; the Hardware table below dates the measurements.
+Scored 2026-10-27T19:16:34.005304+00:00 from measurements taken by isolated comparison processes. Criteria come from `criteria.py` at scoring time, so a stored run can be re-scored without being re-measured; the Hardware table below dates the measurements.
 
 ## Outcome
 
 - Overall: **FAIL**
-- Method groups passing: **15/20**
-- Gating metrics passing: **151/162**
+- Method groups passing: **14/20**
+- Gating metrics passing: **148/162**
 - Additional measurements recorded as evidence: **318**
 - Scripts completing successfully: **20/20**
 
@@ -15,21 +15,21 @@ Scored 2026-08-31T13:55:43.573602+00:00 from measurements taken by isolated comp
 | Package | Version(s) |
 | --- | --- |
 | decoupler | 2.2.0 |
-| harmonypy | 0.2.0 |
+| harmonypy | 0.0.10 |
 | pertpy | 1.1.1 |
 | rapids-singlecell | 0.16.1 |
-| scanpy | 1.12.3 |
+| scanpy | 1.12.0rc1 |
 | squidpy | 1.8.3 |
 
 ## Hardware
 
 | | |
 | --- | --- |
-| GPU | NVIDIA A100-PCIE-40GB MIG 3g.20gb |
+| GPU | NVIDIA A100 80GB PCIe |
 | Compute capability | 8.0 |
 | CUDA driver / runtime | 13.3 / 12.9 |
-| Device memory | 19.6 GiB |
-| Measured | 2026-08-31T13:44:36.613692+00:00 |
+| Device memory | 79.3 GiB |
+| Measured | 2026-10-27T19:09:40.679756+00:00 |
 
 ## Method groups
 
@@ -37,14 +37,14 @@ Scored 2026-08-31T13:55:43.573602+00:00 from measurements taken by isolated comp
 | --- | --- | --- | --- | --- | --- | ---: |
 | `bbknn_scrublet` | scanpy | pbmc68k_reduced + pbmc3k |  | stochastic | PASS | 5/5 |
 | `biological_pipeline_pbmc3k` | scanpy | pbmc3k_processed raw log-expression with published cell-type labels | 2,638 x 13,714 | biological | FAIL | 9/10 |
-| `calculate_niche` | squidpy | squidpy.datasets.imc | 4,668 x 34 | stochastic | FAIL | 4/9 |
+| `calculate_niche` | squidpy | squidpy.datasets.imc | 4,668 x 34 | stochastic | FAIL | 3/9 |
 | `clustering_extended` | scanpy | scanpy.datasets.pbmc68k_reduced | 700 x 765 | stochastic | PASS | 4/4 |
 | `co_occurrence` | squidpy | squidpy.datasets.imc | 4,668 x 34 | deterministic | PASS | 2/2 |
 | `decoupler_methods` | decoupler | decoupler.ds.toy | 80 x 40 | deterministic | PASS | 9/9 |
 | `distance` | pertpy | seeded grouped Gaussian data | 120 x 12 | deterministic | PASS | 18/18 |
 | `embeddings_extended` | scanpy | scanpy.datasets.pbmc68k_reduced | 700 x 765 | stochastic | PASS | 6/6 |
 | `guide_assignment` | pertpy | seeded Poisson guide-count mixture | 200 x 8 | near-deterministic | PASS | 3/3 |
-| `ingest_cell_cycle` | scanpy | scanpy.datasets.pbmc68k_reduced | 700 x 765 | near-deterministic | PASS | 6/6 |
+| `ingest_cell_cycle` | scanpy | scanpy.datasets.pbmc68k_reduced | 700 x 765 | near-deterministic | FAIL | 4/6 |
 | `ligrec` | squidpy | scanpy.datasets.paul15 | 742 x 3,451 | stochastic | PASS | 3/3 |
 | `mixscale` | pertpy | seeded synthetic perturbation screen | 30 x 20 | deterministic | PASS | 1/1 |
 | `mixscape` | pertpy | seeded synthetic perturbation screen | 30 x 20 | near-deterministic | PASS | 4/4 |
@@ -62,46 +62,48 @@ A criterion is never widened to make a run green. Where a failure has been inves
 
 | Method group | Metric | Observed | Criterion | Why it fails |
 | --- | --- | ---: | --- | --- |
-| `biological_pipeline_pbmc3k` | `umap.cross_embedding_knn_overlap` | 0.40189538 | >= 0.6 | UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows against itself. Compare `umap.cpu_reseeded_knn_overlap`, the same measurement with only the seed changed, and `umap.cross_embedding_overlap_vs_cpu_baseline`. |
+| `biological_pipeline_pbmc3k` | `umap.cross_embedding_knn_overlap` | 0.3937579 | >= 0.6 | UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows against itself. Compare `umap.cpu_reseeded_knn_overlap`, the same measurement with only the seed changed, and `umap.cross_embedding_overlap_vs_cpu_baseline`. |
 | `calculate_niche` | `neighborhood.adjusted_rand_index` | 0.85900898 | >= 0.9 | The neighborhood profile holds only 755 distinct rows across 4668 cells, so 89.67% of cells have an exact distance tie at the k-th neighbour. Against exact float64 ground truth the GPU kNN is exact and `sc.pp.neighbors` is not, on 743 rows: the divergence is the CPU reference. |
 | `calculate_niche` | `neighborhood.normalized_mutual_information` | 0.80667388 | >= 0.9 | The neighborhood profile holds only 755 distinct rows across 4668 cells, so 89.67% of cells have an exact distance tie at the k-th neighbour. Against exact float64 ground truth the GPU kNN is exact and `sc.pp.neighbors` is not, on 743 rows: the divergence is the CPU reference. |
 | `calculate_niche` | `neighborhood.cluster_count_difference` | 11 | <= 1.0 | `resolution` does not carry the same meaning across Leiden implementations: on identical input cuGraph found 34 clusters where leidenalg found 41, and Scanpy's own two backends already differ by 1. |
-| `calculate_niche` | `utag.adjusted_rand_index` | 0.55462722 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
-| `calculate_niche` | `utag.normalized_mutual_information` | 0.73327271 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
-| `scanpy_core_graphs_embeddings` | `umap.cross_embedding_knn_overlap` | 0.58847619 | >= 0.65 | UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows against itself. On this dataset the GPU embedding is closer to the CPU one than a reseeded CPU run is, and the criterion still fails. |
-| `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_excess` | 3.4642374 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
+| `calculate_niche` | `utag.cluster_count_difference` | 2 | <= 1.0 | `resolution` does not carry the same meaning across Leiden implementations: on identical input cuGraph found 34 clusters where leidenalg found 41, and Scanpy's own two backends already differ by 1. |
+| `calculate_niche` | `utag.adjusted_rand_index` | 0.52341362 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
+| `calculate_niche` | `utag.normalized_mutual_information` | 0.73244309 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
+| `ingest_cell_cycle` | `ingest.label.exact_agreement` | 0.96571429 | >= 0.98 | Not yet diagnosed. |
+| `ingest_cell_cycle` | `ingest.pca.pearson_correlation` | 0.99779354 | >= 0.999 | Not yet diagnosed. |
+| `scanpy_core_graphs_embeddings` | `umap.cross_embedding_knn_overlap` | 0.53504762 | >= 0.65 | UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows against itself. On this dataset the GPU embedding is closer to the CPU one than a reseeded CPU run is, and the criterion still fails. |
+| `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_excess` | 3.4598324 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.dispersions_norm.allclose_excess` | 13.067911 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
 | `scanpy_core_preprocessing` | `normalize_pearson_residuals.allclose_excess` | 30.626773 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
 | `scanpy_core_preprocessing` | `scale.allclose_excess` | 1.7870379 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
 
 ## Passing gating criteria
 
-All 151 gating criteria that were met, with the value each was met at.
+All 148 gating criteria that were met, with the value each was met at.
 
 | Method group | Metric | Observed | Criterion |
 | --- | --- | ---: | --- |
 | `bbknn_scrublet` | `bbknn.connectivity_jaccard` | 0.85660446 | >= 0.85 |
-| `bbknn_scrublet` | `scrublet.score.pearson_correlation` | 0.99960556 | >= 0.95 |
+| `bbknn_scrublet` | `scrublet.score.pearson_correlation` | 0.99967912 | >= 0.95 |
 | `bbknn_scrublet` | `scrublet.call.exact_agreement` | 1 | >= 0.95 |
 | `bbknn_scrublet` | `scrublet_simulate_doublets.library_size.relative_error_of_mean` | 0 | <= 0.02 |
 | `bbknn_scrublet` | `scrublet_simulate_doublets.library_size.relative_error_of_std` | 0 | <= 0.05 |
 | `biological_pipeline_pbmc3k` | `highly_variable_genes.selection.set_jaccard` | 1 | >= 0.98 |
 | `biological_pipeline_pbmc3k` | `pca.minimum_component_abs_correlation` | 0.99999976 | >= 0.95 |
-| `biological_pipeline_pbmc3k` | `clustering.adjusted_rand_index` | 0.97185077 | >= 0.8 |
-| `biological_pipeline_pbmc3k` | `clustering.normalized_mutual_information` | 0.95319585 | >= 0.8 |
-| `biological_pipeline_pbmc3k` | `clustering.cell_type_nmi_difference` | 0.0058586141 | <= 0.05 |
+| `biological_pipeline_pbmc3k` | `clustering.adjusted_rand_index` | 0.97749674 | >= 0.8 |
+| `biological_pipeline_pbmc3k` | `clustering.normalized_mutual_information` | 0.96059391 | >= 0.8 |
+| `biological_pipeline_pbmc3k` | `clustering.cell_type_nmi_difference` | 0.005774023 | <= 0.05 |
 | `biological_pipeline_pbmc3k` | `annotation.exact_agreement` | 1 | >= 0.9 |
 | `biological_pipeline_pbmc3k` | `annotation.accuracy_difference` | 0 | <= 0.05 |
 | `biological_pipeline_pbmc3k` | `markers.mean_set_jaccard` | 1 | >= 0.85 |
 | `biological_pipeline_pbmc3k` | `markers.minimum_set_jaccard` | 1 | >= 0.7 |
 | `calculate_niche` | `cellcharter.cluster_count_difference` | 0 | <= 1.0 |
-| `calculate_niche` | `utag.cluster_count_difference` | 0 | <= 1.0 |
 | `calculate_niche` | `cellcharter.adjusted_rand_index` | 0.95829445 | >= 0.8 |
 | `calculate_niche` | `cellcharter.normalized_mutual_information` | 0.92532776 | >= 0.8 |
-| `clustering_extended` | `louvain.adjusted_rand_index` | 0.83012383 | >= 0.8 |
-| `clustering_extended` | `louvain.normalized_mutual_information` | 0.87982206 | >= 0.8 |
-| `clustering_extended` | `kmeans.adjusted_rand_index` | 0.81757112 | >= 0.8 |
-| `clustering_extended` | `kmeans.normalized_mutual_information` | 0.89715941 | >= 0.8 |
+| `clustering_extended` | `louvain.adjusted_rand_index` | 0.83446809 | >= 0.8 |
+| `clustering_extended` | `louvain.normalized_mutual_information` | 0.88434759 | >= 0.8 |
+| `clustering_extended` | `kmeans.adjusted_rand_index` | 0.85041939 | >= 0.8 |
+| `clustering_extended` | `kmeans.normalized_mutual_information` | 0.8977017 | >= 0.8 |
 | `co_occurrence` | `occurrence.mean_abs_error` | 9.8388647e-08 | <= 1e-06 |
 | `co_occurrence` | `occurrence.pearson_correlation` | 1 | >= 0.99999 |
 | `decoupler_methods` | `aucell.score.pearson_correlation` | 1 | >= 0.999 |
@@ -132,17 +134,15 @@ All 151 gating criteria that were met, with the value each was met at.
 | `distance` | `root_mean_squared_error.onesided.pearson_correlation` | 1 | >= 0.9999 |
 | `distance` | `wasserstein.onesided.pearson_correlation` | 1 | >= 0.9999 |
 | `embeddings_extended` | `tsne.cpu.trustworthiness` | 0.94223113 | >= 0.9 |
-| `embeddings_extended` | `tsne.gpu.trustworthiness` | 0.92288134 | >= 0.9 |
-| `embeddings_extended` | `tsne.cross_embedding_knn_overlap` | 0.49495238 | >= 0.45 |
+| `embeddings_extended` | `tsne.gpu.trustworthiness` | 0.91939059 | >= 0.9 |
+| `embeddings_extended` | `tsne.cross_embedding_knn_overlap` | 0.50380952 | >= 0.45 |
 | `embeddings_extended` | `diffmap.minimum_component_abs_correlation` | 1 | >= 0.95 |
-| `embeddings_extended` | `draw_graph.cross_embedding_knn_overlap` | 0.61295238 | >= 0.6 |
+| `embeddings_extended` | `draw_graph.cross_embedding_knn_overlap` | 0.61304762 | >= 0.6 |
 | `embeddings_extended` | `embedding_density.pearson_correlation` | 1 | >= 0.999 |
 | `guide_assignment` | `assign_by_threshold.exact_agreement` | 1 | >= 1.0 |
 | `guide_assignment` | `assign_to_max_guide.exact_agreement` | 1 | >= 1.0 |
 | `guide_assignment` | `assign_mixture_model.exact_agreement` | 1 | >= 0.9 |
-| `ingest_cell_cycle` | `ingest.label.exact_agreement` | 0.99142857 | >= 0.98 |
-| `ingest_cell_cycle` | `ingest.pca.pearson_correlation` | 1 | >= 0.999 |
-| `ingest_cell_cycle` | `ingest.umap.cross_embedding_knn_overlap` | 0.52761905 | >= 0.45 |
+| `ingest_cell_cycle` | `ingest.umap.cross_embedding_knn_overlap` | 0.50038095 | >= 0.45 |
 | `ingest_cell_cycle` | `score_genes_cell_cycle.S.pearson_correlation` | 1 | >= 0.999 |
 | `ingest_cell_cycle` | `score_genes_cell_cycle.G2M.pearson_correlation` | 1 | >= 0.999 |
 | `ingest_cell_cycle` | `score_genes_cell_cycle.phase.exact_agreement` | 1 | >= 0.99 |
@@ -154,12 +154,12 @@ All 151 gating criteria that were met, with the value each was met at.
 | `mixscape` | `mixscape.global_class.exact_agreement` | 1 | >= 0.95 |
 | `mixscape` | `mixscape.p_ko.pearson_correlation` | 1 | >= 0.95 |
 | `mixscape` | `mixscape.lda.lda_abs_correlation` | 1 | >= 0.95 |
-| `rank_genes_groups` | `logreg.CD14+ Monocyte.score.pearson_correlation` | 0.99693531 | >= 0.98 |
-| `rank_genes_groups` | `logreg.CD19+ B.score.pearson_correlation` | 0.99381806 | >= 0.98 |
-| `rank_genes_groups` | `logreg.CD34+.score.pearson_correlation` | 0.99124437 | >= 0.98 |
-| `rank_genes_groups` | `logreg.CD56+ NK.score.pearson_correlation` | 0.9978039 | >= 0.98 |
-| `rank_genes_groups` | `logreg.CD8+ Cytotoxic T.score.pearson_correlation` | 0.99569258 | >= 0.98 |
-| `rank_genes_groups` | `logreg.Dendritic.score.pearson_correlation` | 0.99564116 | >= 0.98 |
+| `rank_genes_groups` | `logreg.CD14+ Monocyte.score.pearson_correlation` | 0.99664938 | >= 0.98 |
+| `rank_genes_groups` | `logreg.CD19+ B.score.pearson_correlation` | 0.99323278 | >= 0.98 |
+| `rank_genes_groups` | `logreg.CD34+.score.pearson_correlation` | 0.9893143 | >= 0.98 |
+| `rank_genes_groups` | `logreg.CD56+ NK.score.pearson_correlation` | 0.99760524 | >= 0.98 |
+| `rank_genes_groups` | `logreg.CD8+ Cytotoxic T.score.pearson_correlation` | 0.99445244 | >= 0.98 |
+| `rank_genes_groups` | `logreg.Dendritic.score.pearson_correlation` | 0.99505581 | >= 0.98 |
 | `rank_genes_groups` | `t-test.CD14+ Monocyte.score.pearson_correlation` | 1 | >= 0.98 |
 | `rank_genes_groups` | `t-test.CD19+ B.score.pearson_correlation` | 1 | >= 0.98 |
 | `rank_genes_groups` | `t-test.CD34+.score.pearson_correlation` | 1 | >= 0.98 |
@@ -173,10 +173,10 @@ All 151 gating criteria that were met, with the value each was met at.
 | `rank_genes_groups` | `wilcoxon.CD8+ Cytotoxic T.score.pearson_correlation` | 1 | >= 0.98 |
 | `rank_genes_groups` | `wilcoxon.Dendritic.score.pearson_correlation` | 1 | >= 0.98 |
 | `rank_genes_groups` | `logreg.CD14+ Monocyte.markers.set_jaccard` | 0.96078431 | >= 0.85 |
-| `rank_genes_groups` | `logreg.CD19+ B.markers.set_jaccard` | 0.92307692 | >= 0.85 |
-| `rank_genes_groups` | `logreg.CD34+.markers.set_jaccard` | 0.92307692 | >= 0.85 |
+| `rank_genes_groups` | `logreg.CD19+ B.markers.set_jaccard` | 0.88679245 | >= 0.85 |
+| `rank_genes_groups` | `logreg.CD34+.markers.set_jaccard` | 0.88679245 | >= 0.85 |
 | `rank_genes_groups` | `logreg.CD56+ NK.markers.set_jaccard` | 0.88679245 | >= 0.85 |
-| `rank_genes_groups` | `logreg.CD8+ Cytotoxic T.markers.set_jaccard` | 0.88679245 | >= 0.85 |
+| `rank_genes_groups` | `logreg.CD8+ Cytotoxic T.markers.set_jaccard` | 0.85185185 | >= 0.85 |
 | `rank_genes_groups` | `logreg.Dendritic.markers.set_jaccard` | 0.92307692 | >= 0.85 |
 | `rank_genes_groups` | `t-test.CD14+ Monocyte.markers.set_jaccard` | 1 | >= 0.85 |
 | `rank_genes_groups` | `t-test.CD19+ B.markers.set_jaccard` | 1 | >= 0.85 |
@@ -192,18 +192,18 @@ All 151 gating criteria that were met, with the value each was met at.
 | `rank_genes_groups` | `wilcoxon.Dendritic.markers.set_jaccard` | 1 | >= 0.85 |
 | `scanpy_core_graphs_embeddings` | `neighbors.distance.graph_jaccard` | 1 | >= 0.9 |
 | `scanpy_core_graphs_embeddings` | `neighbors.connectivity.graph_jaccard` | 1 | >= 0.85 |
-| `scanpy_core_graphs_embeddings` | `leiden.adjusted_rand_index` | 0.98847148 | >= 0.9 |
-| `scanpy_core_graphs_embeddings` | `leiden.normalized_mutual_information` | 0.98509508 | >= 0.9 |
-| `scanpy_core_harmony` | `harmony.minimum_component_abs_correlation` | 0.99860453 | > 0.95 |
-| `scanpy_core_harmony` | `harmony.mean_component_abs_correlation` | 0.99930255 | >= 0.98 |
-| `scanpy_core_harmony` | `harmony.standard_deviation_max_abs_error` | 0.00766872 | <= 0.1 |
-| `scanpy_core_harmony` | `harmony.relative_l2_max` | 0.053066333 | <= 0.1 |
+| `scanpy_core_graphs_embeddings` | `leiden.adjusted_rand_index` | 0.99130605 | >= 0.9 |
+| `scanpy_core_graphs_embeddings` | `leiden.normalized_mutual_information` | 0.98796652 | >= 0.9 |
+| `scanpy_core_harmony` | `harmony.minimum_component_abs_correlation` | 0.99846408 | > 0.95 |
+| `scanpy_core_harmony` | `harmony.mean_component_abs_correlation` | 0.99926382 | >= 0.98 |
+| `scanpy_core_harmony` | `harmony.standard_deviation_max_abs_error` | 0.028548784 | <= 0.1 |
+| `scanpy_core_harmony` | `harmony.relative_l2_max` | 0.05559706 | <= 0.1 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.selection.set_jaccard` | 1 | >= 0.99 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.means.allclose_excess` | 0.0056182951 | <= 1.0 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions.allclose_excess` | 0.037546118 | <= 1.0 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.selection.set_jaccard` | 1 | >= 0.99 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.means.allclose_excess` | 0 | <= 1.0 |
-| `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.dispersions.allclose_excess` | 0.0048088661 | <= 1.0 |
+| `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.dispersions.allclose_excess` | 0.0048088674 | <= 1.0 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat_v3.selection.set_jaccard` | 1 | >= 0.99 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat_v3.means.allclose_excess` | 0 | <= 1.0 |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat_v3.variances.allclose_excess` | 5.8694418e-11 | <= 1.0 |
@@ -214,9 +214,9 @@ All 151 gating criteria that were met, with the value each was met at.
 | `scanpy_core_hvg_pca` | `highly_variable_genes.pearson_residuals.residual_variances.allclose_excess` | 0.35402906 | <= 1.0 |
 | `scanpy_core_hvg_pca` | `pca.scores.minimum_component_abs_correlation` | 1 | >= 0.95 |
 | `scanpy_core_hvg_pca` | `pca.loadings.minimum_component_abs_correlation` | 1 | >= 0.95 |
-| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.allclose_excess` | 5.2277287e-10 | <= 1.0 |
-| `scanpy_core_hvg_pca` | `pca.scores.abs_allclose_excess` | 0.0085774199 | <= 1.0 |
-| `scanpy_core_hvg_pca` | `pca.loadings.abs_allclose_excess` | 1.7687717e-05 | <= 1.0 |
+| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.allclose_excess` | 5.403652e-10 | <= 1.0 |
+| `scanpy_core_hvg_pca` | `pca.scores.abs_allclose_excess` | 0.0094870597 | <= 1.0 |
+| `scanpy_core_hvg_pca` | `pca.loadings.abs_allclose_excess` | 1.5801865e-05 | <= 1.0 |
 | `scanpy_core_preprocessing` | `filter_cells.index_agreement` | 1 | >= 1.0 |
 | `scanpy_core_preprocessing` | `filter_genes.index_agreement` | 1 | >= 1.0 |
 | `scanpy_core_preprocessing` | `normalize_total.allclose_excess` | 0.014920842 | <= 1.0 |
@@ -238,8 +238,8 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 
 | Method group | Measurement | Observed | Why it is not a criterion |
 | --- | --- | ---: | --- |
-| `biological_pipeline_pbmc3k` | `umap.cpu_reseeded_knn_overlap` | 0.40328532 |  |
-| `biological_pipeline_pbmc3k` | `umap.cross_embedding_overlap_vs_cpu_baseline` | -0.0013899419 |  |
+| `biological_pipeline_pbmc3k` | `umap.cpu_reseeded_knn_overlap` | 0.41086682 |  |
+| `biological_pipeline_pbmc3k` | `umap.cross_embedding_overlap_vs_cpu_baseline` | -0.017108921 |  |
 | `biological_pipeline_pbmc3k` | `markers.B cells.set_jaccard` | 1 |  |
 | `biological_pipeline_pbmc3k` | `markers.CD14+ Monocytes.set_jaccard` | 1 |  |
 | `biological_pipeline_pbmc3k` | `markers.CD4 T cells.set_jaccard` | 1 |  |
@@ -303,41 +303,41 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `decoupler_methods` | `zscore.score.allclose_violating_fraction` | 0 |  |
 | `decoupler_methods` | `zscore.score.max_abs_error` | 1.1061835e-06 |  |
 | `decoupler_methods` | `zscore.score.max_rel_error` | 1.1115226e-07 |  |
-| `distance` | `cosine_distance.pairwise.allclose_excess` | 4.1430926e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `cosine_distance.pairwise.allclose_worst_magnitude` | 0.079390891 |  |
+| `distance` | `cosine_distance.pairwise.allclose_excess` | 1.1038135e-09 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `cosine_distance.pairwise.allclose_worst_magnitude` | 0.019116133 |  |
 | `distance` | `cosine_distance.pairwise.allclose_violating_fraction` | 0 |  |
 | `distance` | `cosine_distance.pairwise.max_abs_error` | 3.3306691e-16 |  |
 | `distance` | `cosine_distance.pairwise.max_rel_error` | 2.8720159e-16 |  |
-| `distance` | `edistance.pairwise.allclose_excess` | 5.9062026e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `edistance.pairwise.allclose_excess` | 9.843671e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `edistance.pairwise.allclose_worst_magnitude` | 0.45014187 |  |
 | `distance` | `edistance.pairwise.allclose_violating_fraction` | 0 |  |
-| `distance` | `edistance.pairwise.max_abs_error` | 3.5527137e-15 |  |
-| `distance` | `edistance.pairwise.max_rel_error` | 8.0616473e-16 |  |
-| `distance` | `euclidean.pairwise.allclose_excess` | 1.5800423e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `edistance.pairwise.max_abs_error` | 1.9539925e-14 |  |
+| `distance` | `edistance.pairwise.max_rel_error` | 4.433906e-15 |  |
+| `distance` | `euclidean.pairwise.allclose_excess` | 6.0770858e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `euclidean.pairwise.allclose_worst_magnitude` | 1.8259004 |  |
 | `distance` | `euclidean.pairwise.allclose_violating_fraction` | 0 |  |
-| `distance` | `euclidean.pairwise.max_abs_error` | 2.8865799e-15 |  |
-| `distance` | `euclidean.pairwise.max_rel_error` | 5.541142e-16 |  |
-| `distance` | `mean_absolute_error.pairwise.allclose_excess` | 4.5691857e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `euclidean.pairwise.max_abs_error` | 1.110223e-15 |  |
+| `distance` | `euclidean.pairwise.max_rel_error` | 2.1312085e-16 |  |
+| `distance` | `mean_absolute_error.pairwise.allclose_excess` | 2.2845928e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `mean_absolute_error.pairwise.allclose_worst_magnitude` | 0.484961 |  |
 | `distance` | `mean_absolute_error.pairwise.allclose_violating_fraction` | 0 |  |
-| `distance` | `mean_absolute_error.pairwise.max_abs_error` | 4.4408921e-16 |  |
-| `distance` | `mean_absolute_error.pairwise.max_rel_error` | 2.9676795e-16 |  |
-| `distance` | `mse.pairwise.allclose_excess` | 1.1945331e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `mean_absolute_error.pairwise.max_abs_error` | 2.220446e-16 |  |
+| `distance` | `mean_absolute_error.pairwise.max_rel_error` | 1.4838397e-16 |  |
+| `distance` | `mse.pairwise.allclose_excess` | 3.1854217e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `mse.pairwise.allclose_worst_magnitude` | 0.27782601 |  |
 | `distance` | `mse.pairwise.allclose_violating_fraction` | 0 |  |
 | `distance` | `mse.pairwise.max_abs_error` | 8.8817842e-16 |  |
 | `distance` | `mse.pairwise.max_rel_error` | 3.92747e-16 |  |
-| `distance` | `pearson_distance.pairwise.allclose_excess` | 6.8855857e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `pearson_distance.pairwise.allclose_worst_magnitude` | 1.2889098 |  |
+| `distance` | `pearson_distance.pairwise.allclose_excess` | 2.2748871e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `pearson_distance.pairwise.allclose_worst_magnitude` | 0.63344463 |  |
 | `distance` | `pearson_distance.pairwise.allclose_violating_fraction` | 0 |  |
-| `distance` | `pearson_distance.pairwise.max_abs_error` | 8.8817842e-16 |  |
-| `distance` | `pearson_distance.pairwise.max_rel_error` | 5.5127348e-16 |  |
-| `distance` | `r2_distance.pairwise.allclose_excess` | 2.0358689e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `pearson_distance.pairwise.max_abs_error` | 1.4432899e-15 |  |
+| `distance` | `pearson_distance.pairwise.max_rel_error` | 8.958194e-16 |  |
+| `distance` | `r2_distance.pairwise.allclose_excess` | 2.1924742e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `r2_distance.pairwise.allclose_worst_magnitude` | 11.341891 |  |
 | `distance` | `r2_distance.pairwise.allclose_violating_fraction` | 0 |  |
-| `distance` | `r2_distance.pairwise.max_abs_error` | 5.6843419e-14 |  |
-| `distance` | `r2_distance.pairwise.max_rel_error` | 4.7105088e-16 |  |
+| `distance` | `r2_distance.pairwise.max_abs_error` | 2.8421709e-14 |  |
+| `distance` | `r2_distance.pairwise.max_rel_error` | 2.3552544e-16 |  |
 | `distance` | `root_mean_squared_error.pairwise.allclose_excess` | 4.8616687e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `root_mean_squared_error.pairwise.allclose_worst_magnitude` | 1.8259004 |  |
 | `distance` | `root_mean_squared_error.pairwise.allclose_violating_fraction` | 0 |  |
@@ -348,46 +348,46 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `distance` | `wasserstein.pairwise.allclose_violating_fraction` | 0 |  |
 | `distance` | `wasserstein.pairwise.max_abs_error` | 0.00014964406 |  |
 | `distance` | `wasserstein.pairwise.max_rel_error` | 3.6405663e-06 |  |
-| `distance` | `cosine_distance.onesided.allclose_excess` | 2.1415124e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `cosine_distance.onesided.allclose_worst_magnitude` | 1.0358588 |  |
+| `distance` | `cosine_distance.onesided.allclose_excess` | 1.9130277e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `cosine_distance.onesided.allclose_worst_magnitude` | 1.1596973 |  |
 | `distance` | `cosine_distance.onesided.allclose_violating_fraction` | 0 |  |
 | `distance` | `cosine_distance.onesided.max_abs_error` | 2.220446e-16 |  |
 | `distance` | `cosine_distance.onesided.max_rel_error` | 1.9146773e-16 |  |
 | `distance` | `edistance.onesided.allclose_excess` | 5.9062026e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `edistance.onesided.allclose_worst_magnitude` | 0.45014187 |  |
 | `distance` | `edistance.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `edistance.onesided.max_abs_error` | 2.6645353e-15 |  |
-| `distance` | `edistance.onesided.max_rel_error` | 6.0462355e-16 |  |
-| `distance` | `euclidean.onesided.allclose_excess` | 1.7046396e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `euclidean.onesided.allclose_worst_magnitude` | 5.2093591 |  |
+| `distance` | `edistance.onesided.max_abs_error` | 7.1054274e-15 |  |
+| `distance` | `edistance.onesided.max_rel_error` | 1.6123295e-15 |  |
+| `distance` | `euclidean.onesided.allclose_excess` | 1.3080085e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `euclidean.onesided.allclose_worst_magnitude` | 1.6965777 |  |
 | `distance` | `euclidean.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `euclidean.onesided.max_abs_error` | 8.8817842e-16 |  |
-| `distance` | `euclidean.onesided.max_rel_error` | 1.7049668e-16 |  |
-| `distance` | `mean_absolute_error.onesided.allclose_excess` | 2.9656976e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `mean_absolute_error.onesided.allclose_worst_magnitude` | 1.496419 |  |
+| `distance` | `euclidean.onesided.max_abs_error` | 2.220446e-16 |  |
+| `distance` | `euclidean.onesided.max_rel_error` | 4.2624169e-17 |  |
+| `distance` | `mean_absolute_error.onesided.allclose_excess` | 2.1716695e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `mean_absolute_error.onesided.allclose_worst_magnitude` | 1.0214604 |  |
 | `distance` | `mean_absolute_error.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `mean_absolute_error.onesided.max_abs_error` | 4.4408921e-16 |  |
-| `distance` | `mean_absolute_error.onesided.max_rel_error` | 2.9676795e-16 |  |
-| `distance` | `mse.onesided.allclose_excess` | 3.925734e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `mse.onesided.allclose_worst_magnitude` | 2.2614518 |  |
+| `distance` | `mean_absolute_error.onesided.max_abs_error` | 2.220446e-16 |  |
+| `distance` | `mean_absolute_error.onesided.max_rel_error` | 1.4838397e-16 |  |
+| `distance` | `mse.onesided.allclose_excess` | 3.4569923e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `mse.onesided.allclose_worst_magnitude` | 0.23986466 |  |
 | `distance` | `mse.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `mse.onesided.max_abs_error` | 8.8817842e-16 |  |
-| `distance` | `mse.onesided.max_rel_error` | 3.92747e-16 |  |
-| `distance` | `pearson_distance.onesided.allclose_excess` | 1.0499479e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `mse.onesided.max_abs_error` | 2.220446e-16 |  |
+| `distance` | `mse.onesided.max_rel_error` | 9.8186749e-17 |  |
+| `distance` | `pearson_distance.onesided.allclose_excess` | 6.9996527e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `pearson_distance.onesided.allclose_worst_magnitude` | 0.63344463 |  |
 | `distance` | `pearson_distance.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `pearson_distance.onesided.max_abs_error` | 6.6613381e-16 |  |
-| `distance` | `pearson_distance.onesided.max_rel_error` | 4.1345511e-16 |  |
-| `distance` | `r2_distance.onesided.allclose_excess` | 2.4469955e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `r2_distance.onesided.allclose_worst_magnitude` | 139.3783 |  |
+| `distance` | `pearson_distance.onesided.max_abs_error` | 4.4408921e-16 |  |
+| `distance` | `pearson_distance.onesided.max_rel_error` | 2.7563674e-16 |  |
+| `distance` | `r2_distance.onesided.allclose_excess` | 2.0332573e-10 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `r2_distance.onesided.allclose_worst_magnitude` | 45.428841 |  |
 | `distance` | `r2_distance.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `r2_distance.onesided.max_abs_error` | 3.4106051e-13 |  |
-| `distance` | `r2_distance.onesided.max_rel_error` | 2.4470131e-15 |  |
-| `distance` | `root_mean_squared_error.onesided.allclose_excess` | 1.7046396e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `distance` | `root_mean_squared_error.onesided.allclose_worst_magnitude` | 5.2093591 |  |
+| `distance` | `r2_distance.onesided.max_abs_error` | 1.4210855e-13 |  |
+| `distance` | `r2_distance.onesided.max_rel_error` | 1.0195888e-15 |  |
+| `distance` | `root_mean_squared_error.onesided.allclose_excess` | 1.3080085e-11 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `distance` | `root_mean_squared_error.onesided.allclose_worst_magnitude` | 1.6965777 |  |
 | `distance` | `root_mean_squared_error.onesided.allclose_violating_fraction` | 0 |  |
-| `distance` | `root_mean_squared_error.onesided.max_abs_error` | 8.8817842e-16 |  |
-| `distance` | `root_mean_squared_error.onesided.max_rel_error` | 1.7049668e-16 |  |
+| `distance` | `root_mean_squared_error.onesided.max_abs_error` | 2.220446e-16 |  |
+| `distance` | `root_mean_squared_error.onesided.max_rel_error` | 4.2624169e-17 |  |
 | `distance` | `wasserstein.onesided.allclose_excess` | 0.431481 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `distance` | `wasserstein.onesided.allclose_worst_magnitude` | 15.181197 |  |
 | `distance` | `wasserstein.onesided.allclose_violating_fraction` | 0 |  |
@@ -396,8 +396,8 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `ligrec` | `means.allclose_excess` | 0.036598376 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `ligrec` | `means.allclose_worst_magnitude` | 0.30797675 |  |
 | `ligrec` | `means.allclose_violating_fraction` | 0 |  |
-| `ligrec` | `means.max_abs_error` | 4.8664557e-07 |  |
-| `ligrec` | `means.max_rel_error` | 2.6229298e-07 |  |
+| `ligrec` | `means.max_abs_error` | 3.4461462e-07 |  |
+| `ligrec` | `means.max_rel_error` | 1.8574092e-07 |  |
 | `mixscale` | `mixscale.score.allclose_excess` | 0.0051948259 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `mixscale` | `mixscale.score.allclose_worst_magnitude` | 17.165429 |  |
 | `mixscale` | `mixscale.score.allclose_violating_fraction` | 0 |  |
@@ -408,8 +408,8 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `mixscape` | `perturbation_signature.allclose_violating_fraction` | 0.01 |  |
 | `mixscape` | `perturbation_signature.max_abs_error` | 3.5762787e-07 |  |
 | `mixscape` | `perturbation_signature.max_rel_error` | 7.0769806e-08 |  |
-| `scanpy_core_graphs_embeddings` | `umap.cpu_reseeded_knn_overlap` | 0.55466667 |  |
-| `scanpy_core_graphs_embeddings` | `umap.cross_embedding_overlap_vs_cpu_baseline` | 0.033809524 |  |
+| `scanpy_core_graphs_embeddings` | `umap.cpu_reseeded_knn_overlap` | 0.52809524 |  |
+| `scanpy_core_graphs_embeddings` | `umap.cross_embedding_overlap_vs_cpu_baseline` | 0.006952381 |  |
 | `scanpy_core_graphs_embeddings` | `neighbors.distance.graph_exact_agreement` | 1 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `scanpy_core_graphs_embeddings` | `neighbors.connectivity.graph_exact_agreement` | 1 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.means.allclose_worst_magnitude` | 0.0025274159 |  |
@@ -420,7 +420,7 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions.allclose_violating_fraction` | 0 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions.max_abs_error` | 1.9906221e-07 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions.max_rel_error` | 3.170862e-08 |  |
-| `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_worst_magnitude` | 0.00032151237 |  |
+| `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_worst_magnitude` | 0.00032151249 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_violating_fraction` | 0.0010208546 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.max_abs_error` | 4.7683716e-07 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.max_rel_error` | 5.963089e-08 |  |
@@ -460,18 +460,18 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `scanpy_core_hvg_pca` | `highly_variable_genes.pearson_residuals.residual_variances.allclose_violating_fraction` | 0 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.pearson_residuals.residual_variances.max_abs_error` | 2.5951501e-05 |  |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.pearson_residuals.residual_variances.max_rel_error` | 6.7031421e-07 |  |
-| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.allclose_worst_magnitude` | 0.0049729616 |  |
+| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.allclose_worst_magnitude` | 0.0026115647 |  |
 | `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.allclose_violating_fraction` | 0 |  |
-| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.max_abs_error` | 6.5919492e-17 |  |
-| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.max_rel_error` | 1.5984538e-15 |  |
-| `scanpy_core_hvg_pca` | `pca.scores.abs_allclose_worst_magnitude` | 0.042431362 |  |
+| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.max_abs_error` | 5.8980598e-17 |  |
+| `scanpy_core_hvg_pca` | `pca.explained_variance_ratio.max_rel_error` | 1.4301955e-15 |  |
+| `scanpy_core_hvg_pca` | `pca.scores.abs_allclose_worst_magnitude` | 0.0039083837 |  |
 | `scanpy_core_hvg_pca` | `pca.scores.abs_allclose_violating_fraction` | 0 |  |
-| `scanpy_core_hvg_pca` | `pca.scores.abs_max_abs_error` | 3.7252903e-09 |  |
-| `scanpy_core_hvg_pca` | `pca.scores.abs_max_rel_error` | 6.8615636e-11 |  |
-| `scanpy_core_hvg_pca` | `pca.loadings.abs_allclose_worst_magnitude` | 3.0642417e-05 |  |
+| `scanpy_core_hvg_pca` | `pca.scores.abs_max_abs_error` | 2.9802322e-08 |  |
+| `scanpy_core_hvg_pca` | `pca.scores.abs_max_rel_error` | 5.4892509e-10 |  |
+| `scanpy_core_hvg_pca` | `pca.loadings.abs_allclose_worst_magnitude` | 3.0657911e-05 |  |
 | `scanpy_core_hvg_pca` | `pca.loadings.abs_allclose_violating_fraction` | 0 |  |
-| `scanpy_core_hvg_pca` | `pca.loadings.abs_max_abs_error` | 4.3506865e-13 |  |
-| `scanpy_core_hvg_pca` | `pca.loadings.abs_max_rel_error` | 1.225426e-12 |  |
+| `scanpy_core_hvg_pca` | `pca.loadings.abs_max_abs_error` | 3.8790499e-13 |  |
+| `scanpy_core_hvg_pca` | `pca.loadings.abs_max_rel_error` | 1.0925835e-12 |  |
 | `scanpy_core_preprocessing` | `normalize_total.allclose_worst_magnitude` | 204.52887 |  |
 | `scanpy_core_preprocessing` | `normalize_total.allclose_violating_fraction` | 0 |  |
 | `scanpy_core_preprocessing` | `normalize_total.max_abs_error` | 0.00012207031 |  |
@@ -486,8 +486,8 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `scanpy_core_preprocessing` | `normalize_pearson_residuals.max_rel_error` | 1.4682777e-07 |  |
 | `scanpy_core_preprocessing` | `scale.allclose_worst_magnitude` | 0.00072295603 |  |
 | `scanpy_core_preprocessing` | `scale.allclose_violating_fraction` | 1.2962963e-06 |  |
-| `scanpy_core_preprocessing` | `scale.max_abs_error` | 1.3282612e-06 |  |
-| `scanpy_core_preprocessing` | `scale.max_rel_error` | 1.3282612e-07 |  |
+| `scanpy_core_preprocessing` | `scale.max_abs_error` | 1.3155702e-06 |  |
+| `scanpy_core_preprocessing` | `scale.max_rel_error` | 1.3155702e-07 |  |
 | `scanpy_core_preprocessing` | `sqrt.allclose_worst_magnitude` | 0 |  |
 | `scanpy_core_preprocessing` | `sqrt.allclose_violating_fraction` | 0 |  |
 | `scanpy_core_preprocessing` | `sqrt.max_abs_error` | 0 |  |
@@ -532,26 +532,26 @@ These quantify behaviour rather than test CPU/GPU equivalence, so they are repor
 | `scanpy_core_preprocessing` | `calculate_qc_metrics.total_counts_ribo.allclose_violating_fraction` | 0 |  |
 | `scanpy_core_preprocessing` | `calculate_qc_metrics.total_counts_ribo.max_abs_error` | 0 |  |
 | `scanpy_core_preprocessing` | `calculate_qc_metrics.total_counts_ribo.max_rel_error` | 0 |  |
-| `scanpy_core_preprocessing` | `regress_out.allclose_excess` | 67.439148 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `scanpy_core_preprocessing` | `regress_out.allclose_worst_magnitude` | 0.00012159483 |  |
-| `scanpy_core_preprocessing` | `regress_out.allclose_violating_fraction` | 0.00036685185 |  |
+| `scanpy_core_preprocessing` | `regress_out.allclose_excess` | 166.55903 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `scanpy_core_preprocessing` | `regress_out.allclose_worst_magnitude` | 0.00030490968 |  |
+| `scanpy_core_preprocessing` | `regress_out.allclose_violating_fraction` | 0.00033851852 |  |
 | `scanpy_core_preprocessing` | `regress_out.max_abs_error` | 5.7220459e-06 |  |
 | `scanpy_core_preprocessing` | `regress_out.max_rel_error` | 8.4571531e-07 |  |
-| `scanpy_core_preprocessing` | `score_genes.allclose_excess` | 0 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
-| `scanpy_core_preprocessing` | `score_genes.allclose_worst_magnitude` | 0.56495331 |  |
-| `scanpy_core_preprocessing` | `score_genes.allclose_violating_fraction` | 0 |  |
-| `scanpy_core_preprocessing` | `score_genes.max_abs_error` | 0 |  |
-| `scanpy_core_preprocessing` | `score_genes.max_rel_error` | 0 |  |
-| `spatial_autocorr` | `moran.I.allclose_excess` | 0.0011057476 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `scanpy_core_preprocessing` | `score_genes.allclose_excess` | 4.158956 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `scanpy_core_preprocessing` | `score_genes.allclose_worst_magnitude` | 0.0016656844 |  |
+| `scanpy_core_preprocessing` | `score_genes.allclose_violating_fraction` | 0.0085185185 |  |
+| `scanpy_core_preprocessing` | `score_genes.max_abs_error` | 3.0517578e-07 |  |
+| `scanpy_core_preprocessing` | `score_genes.max_rel_error` | 1.8236806e-07 |  |
+| `spatial_autocorr` | `moran.I.allclose_excess` | 0.0011057477 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `spatial_autocorr` | `moran.I.allclose_worst_magnitude` | 0.031430503 |  |
 | `spatial_autocorr` | `moran.I.allclose_violating_fraction` | 0 |  |
-| `spatial_autocorr` | `moran.I.max_abs_error` | 2.0231724e-09 |  |
-| `spatial_autocorr` | `moran.I.max_rel_error` | 2.8538127e-09 |  |
-| `spatial_autocorr` | `geary.C.allclose_excess` | 0.001317238 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
+| `spatial_autocorr` | `moran.I.max_abs_error` | 2.0231695e-09 |  |
+| `spatial_autocorr` | `moran.I.max_rel_error` | 2.8538087e-09 |  |
+| `spatial_autocorr` | `geary.C.allclose_excess` | 0.0013172397 | Measured against the same numpy.allclose envelope, but not gated: the publication states no tolerance for this operation, so a verdict here would be the suite's invention. |
 | `spatial_autocorr` | `geary.C.allclose_worst_magnitude` | 1.1349175 |  |
 | `spatial_autocorr` | `geary.C.allclose_violating_fraction` | 0 |  |
-| `spatial_autocorr` | `geary.C.max_abs_error` | 1.4962737e-08 |  |
-| `spatial_autocorr` | `geary.C.max_rel_error` | 1.3183986e-08 |  |
+| `spatial_autocorr` | `geary.C.max_abs_error` | 1.4962756e-08 |  |
+| `spatial_autocorr` | `geary.C.max_rel_error` | 1.3184003e-08 |  |
 | `sqrt` | `X.allclose_worst_magnitude` | 0 |  |
 | `sqrt` | `X.allclose_violating_fraction` | 0 |  |
 | `sqrt` | `X.max_abs_error` | 0 |  |
