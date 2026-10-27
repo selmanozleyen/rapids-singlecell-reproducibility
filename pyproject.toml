@@ -1,3 +1,39 @@
+[project]
+name = "rapids-singlecell-reproducibility"
+version = "0.0.0"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    # Versions stated in the manuscript's Methods; the rest as in the earlier 0.16.1 runs.
+    "anndata==0.12.6",
+    "bbknn",
+    "cudf-cu12==25.12.0; sys_platform == 'linux'",
+    "cuml-cu12==25.12.0; sys_platform == 'linux'",
+    "cupy-cuda12x==14.0.0; sys_platform == 'linux'",  # 14.0.0rc1 is no longer on PyPI
+    "decoupler==2.2.0",
+    "fa2-modified",
+    "harmonypy==0.0.10",
+    "igraph",
+    "leidenalg==0.11.0",
+    "numpy==2.2.6",
+    "pertpy==1.1.1",
+    "pooch",
+    "pynndescent==0.5.13",
+    "rapids-singlecell-cu12[rapids]==0.16.1; sys_platform == 'linux'",
+    "librmm-cu12==25.12.0; sys_platform == 'linux'",
+    "scanpy==1.12.0rc1",
+    "scipy==1.16.3",
+    "squidpy==1.8.3",
+    "umap-learn==0.5.9.post2",
+]
+
+[tool.uv]
+package = false
+
+# RAPIDS 25.12 wheels are on NVIDIA's index; PyPI only carries stubs for them.
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
 [tool.ruff]
 extend-include = ["*.ipynb"]
 line-length = 120

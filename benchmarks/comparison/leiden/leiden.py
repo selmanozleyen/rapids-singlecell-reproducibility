@@ -15,7 +15,7 @@ sc.pp.neighbors(adata_sc)
 adata_rsc = adata_sc.copy()
 rsc.get.anndata_to_GPU(adata_rsc)
 
-sc.tl.leiden(adata_sc, resolution=0.7)
+sc.tl.leiden(adata_sc, resolution=0.7, flavor="igraph")  # the CPU backend the manuscript benchmarks used
 rsc.tl.leiden(adata_rsc, resolution=0.7)
 
 rsc.get.anndata_to_CPU(adata_rsc)
