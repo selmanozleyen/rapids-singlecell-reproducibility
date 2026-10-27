@@ -135,10 +135,14 @@ CRITERIA: dict[str, list[tuple[str, str, float, str]]] = {
     ],
     "scanpy_core_harmony": [
         # Strictly greater: the manuscript says >95%, not at least 95%.
-        ("harmony.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
-        ("harmony.mean_component_abs_correlation", ">=", 0.98, ""),
-        ("harmony.standard_deviation_max_abs_error", "<=", 0.1, ""),
-        ("harmony.relative_l2_max", "<=", 0.1, L2_BASIS),
+        ("harmony1.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
+        ("harmony1.mean_component_abs_correlation", ">=", 0.98, ""),
+        ("harmony1.standard_deviation_max_abs_error", "<=", 0.1, ""),
+        ("harmony1.relative_l2_max", "<=", 0.1, L2_BASIS),
+        ("harmony2.minimum_component_abs_correlation", ">", 0.95, HARMONY_BASIS),
+        ("harmony2.mean_component_abs_correlation", ">=", 0.98, ""),
+        ("harmony2.standard_deviation_max_abs_error", "<=", 0.1, ""),
+        ("harmony2.relative_l2_max", "<=", 0.1, L2_BASIS),
     ],
     "scanpy_core_hvg_pca": [
         ("highly_variable_genes.seurat.selection.set_jaccard", ">=", 0.99, ""),

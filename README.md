@@ -547,7 +547,7 @@ repository was produced by a person running the container on a GPU host, so all 
 silently breaking equivalence.
 
 What that costs is not hypothetical. The original one-method scripts are not run by anything, and
-`umap/umap.py` accumulated two independent defects that survived undetected until 2026-08-23: the
+`umap/umap.py` (now `umap/umap_embedding.py`) accumulated two independent defects that survived undetected until 2026-08-23: the
 filename shadowed the installed `umap` package, so `import umap.umap_` inside umap-learn failed
 before any comparison ran, and behind that a typo (`rust_sc` assigned, `trust_sc` asserted) raised
 `NameError`. The script had therefore never executed successfully at all. Both are fixed in
