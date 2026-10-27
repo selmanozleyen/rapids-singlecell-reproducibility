@@ -30,7 +30,7 @@ capture(
 reference_sim = sc.pp.scrublet_simulate_doublets(counts, sim_doublet_ratio=1.0, random_seed=0)
 counts_gpu = counts.copy()
 rsc.get.anndata_to_GPU(counts_gpu)
-candidate_sim = rsc.pp.scrublet_simulate_doublets(counts_gpu, sim_doublet_ratio=1.0, rng=0)
+candidate_sim = rsc.pp.scrublet_simulate_doublets(counts_gpu, sim_doublet_ratio=1.0, random_seed=0)
 ref_totals = np.asarray(reference_sim.X.sum(axis=1)).ravel()
 candidate_sim_x = rsc.get.X_to_CPU(candidate_sim.X)
 gpu_totals = np.asarray(candidate_sim_x.sum(axis=1)).ravel()

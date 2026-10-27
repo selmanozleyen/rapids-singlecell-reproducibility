@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pooch
 import rapids_singlecell as rsc
-from _report import capture, write_report
+from _report import capture, package_version, write_report
 
 METHOD = "scanpy_core_harmony"
 
@@ -39,11 +39,13 @@ capture(
 )
 
 # harmony2: the rsc default, against harmonypy 2.x run now, both at their default stopping rules.
-result = harmonypy.run_harmony(pcs.astype(np.float64), meta, "donor", random_state=0, verbose=False)
-reference = np.asarray(result.Z_corr)
-if reference.shape != pcs.shape:
-    reference = reference.T
-capture(METHOD, "harmony2", reference=reference, candidate=run_rsc("harmony2"))
+# harmonypy before 2.0 implements harmony1 only, so there is no CPU harmony2 to compare against.
+if int(package_version("harmonypy").split(".")[0]) >= 2:
+    result = harmonypy.run_harmony(pcs.astype(np.float64), meta, "donor", random_state=0, verbose=False)
+    reference = np.asarray(result.Z_corr)
+    if reference.shape != pcs.shape:
+        reference = reference.T
+    capture(METHOD, "harmony2", reference=reference, candidate=run_rsc("harmony2"))
 
 write_report(
     METHOD,
