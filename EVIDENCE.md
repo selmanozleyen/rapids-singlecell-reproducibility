@@ -1,6 +1,6 @@
 # CPU/GPU equivalence report
 
-Scored 2026-10-27T19:16:34.005304+00:00 from measurements taken by isolated comparison processes. Criteria come from `criteria.py` at scoring time, so a stored run can be re-scored without being re-measured; the Hardware table below dates the measurements.
+Scored 2026-10-27T20:23:06.683737+00:00 from measurements taken by isolated comparison processes. Criteria come from `criteria.py` at scoring time, so a stored run can be re-scored without being re-measured; the Hardware table below dates the measurements.
 
 ## Outcome
 
@@ -69,8 +69,8 @@ A criterion is never widened to make a run green. Where a failure has been inves
 | `calculate_niche` | `utag.cluster_count_difference` | 2 | <= 1.0 | `resolution` does not carry the same meaning across Leiden implementations: on identical input cuGraph found 34 clusters where leidenalg found 41, and Scanpy's own two backends already differ by 1. |
 | `calculate_niche` | `utag.adjusted_rand_index` | 0.52341362 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
 | `calculate_niche` | `utag.normalized_mutual_information` | 0.73244309 | >= 0.85 | Squidpy calls `sc.tl.leiden` without a flavor, so CPU and GPU use different Leiden backends. On identical input Scanpy's own leidenalg and igraph backends agree only at ARI 0.5041, below this threshold, so the criterion measures backend choice rather than correctness. |
-| `ingest_cell_cycle` | `ingest.label.exact_agreement` | 0.96571429 | >= 0.98 | Not yet diagnosed. |
-| `ingest_cell_cycle` | `ingest.pca.pearson_correlation` | 0.99779354 | >= 0.999 | Not yet diagnosed. |
+| `ingest_cell_cycle` | `ingest.label.exact_agreement` | 0.96571429 | >= 0.98 | The CPU reference is Scanpy 1.12.0rc1, whose `sc.tl.ingest` mis-centres the PCA projection; this needs Scanpy >= 1.12.3. |
+| `ingest_cell_cycle` | `ingest.pca.pearson_correlation` | 0.99779354 | >= 0.999 | The CPU reference is Scanpy 1.12.0rc1, whose `sc.tl.ingest` mis-centres the PCA projection; this needs Scanpy >= 1.12.3. |
 | `scanpy_core_graphs_embeddings` | `umap.cross_embedding_knn_overlap` | 0.53504762 | >= 0.65 | UMAP is stochastic, and this threshold asks for more agreement than the CPU reference shows against itself. On this dataset the GPU embedding is closer to the CPU one than a reseeded CPU run is, and the criterion still fails. |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.seurat.dispersions_norm.allclose_excess` | 3.4598324 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |
 | `scanpy_core_hvg_pca` | `highly_variable_genes.cell_ranger.dispersions_norm.allclose_excess` | 13.067911 | <= 1.0 | numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude of the element that fails. Where a quantity passes through zero the absolute floor binds, and at float32 precision no implementation can satisfy it there. See the Numerical validation section of README.md for the split between that case and a genuine relative disagreement. |

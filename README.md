@@ -365,8 +365,8 @@ and it should be respecified or dropped rather than left to decide a verdict by 
 other quantities that moved are near-threshold stochastic overlaps and float noise at 1e-10 or
 below.
 
-`git log -p EVIDENCE.md` is where that comparison lives, so it is checkable rather than asserted:
-two committed reports, diffed.
+Those two runs used scanpy 1.12.3 and harmonypy 0.2.0. The committed `EVIDENCE.md` is a later run
+with the versions the manuscript states, on a full A100 80GB.
 
 The suite also gates only on _differences_. Absolute quality scores of a single implementation —
 UMAP trustworthiness, per-backend annotation accuracy, per-backend cell-type NMI — are recorded as
@@ -451,8 +451,7 @@ backstop at all.
 
 ### 5. Upstream issues, and exactly where each one is
 
-None of these are patched in this repository. Line numbers are scanpy 1.12.3 and squidpy 1.8.3,
-the versions pinned here.
+None of these are patched in this repository. Line numbers are scanpy 1.12.3 and squidpy 1.8.3.
 
 **scanpy — a real bug, in one word.** `scanpy/neighbors/_common.py`:
 

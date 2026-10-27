@@ -20,7 +20,7 @@ dependencies = [
     "pynndescent==0.5.13",
     "rapids-singlecell-cu12[rapids]==0.16.1; sys_platform == 'linux'",
     "librmm-cu12==25.12.0; sys_platform == 'linux'",
-    "scanpy==1.12.0rc1",
+    "scanpy==1.12.0rc1",  # ingest equivalence needs >=1.12.3 (PCA centering fix)
     "scipy==1.16.3",
     "squidpy==1.8.3",
     "umap-learn==0.5.9.post2",

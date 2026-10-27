@@ -263,6 +263,10 @@ DIAGNOSES: dict[tuple[str, str], str] = {
         "cuGraph found 34 clusters where leidenalg found 41, and Scanpy's own two backends already "
         "differ by 1."
     ),
+    ("ingest_cell_cycle", "ingest.*"): (
+        "The CPU reference is Scanpy 1.12.0rc1, whose `sc.tl.ingest` mis-centres the PCA projection; "
+        "this needs Scanpy >= 1.12.3."
+    ),
     ("*", "*.allclose_excess"): (
         "numpy.allclose has two terms, atol + rtol * |b|, and which one binds depends on the magnitude "
         "of the element that fails. Where a quantity passes through zero the absolute floor binds, and "
