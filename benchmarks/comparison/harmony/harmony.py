@@ -1,4 +1,5 @@
 import anndata as ad
+import harmonypy
 import numpy as np
 import pandas as pd
 import pooch
@@ -11,12 +12,6 @@ X_pca_file = pooch.retrieve(
 )
 X_pca = pd.read_csv(X_pca_file, delimiter="\t")
 
-X_pca_harmony_file = pooch.retrieve(
-    "https://github.com/slowkow/harmonypy/raw/3cb114c/data/pbmc_3500_pcs_harmonized.tsv.gz",
-    known_hash="md5:a7c4ce4b98c390997c66d63d48e09221",
-)
-X_pca_harmony_ref = pd.read_csv(X_pca_harmony_file, delimiter="\t").values
-
 meta_file = pooch.retrieve(
     "https://github.com/slowkow/harmonypy/raw/3cb114c/data/pbmc_3500_meta.tsv.gz",
     known_hash="md5:8c7ca20e926513da7cf0def1211baecb",
@@ -25,10 +20,10 @@ meta = pd.read_csv(meta_file, delimiter="\t")
 
 adata = ad.AnnData(X=None, obs=meta, obsm={"X_pca": X_pca.values})
 
-# flavor="harmony1" is required, not optional: rsc defaults to "harmony2", a different
-# algorithm from the harmonypy implementation this reference file came from. Without it
-# this compares two methods rather than two devices.
-rsc.pp.harmony_integrate(adata, key="donor", flavor="harmony1", max_iter_harmony=20)
+X_pca_harmony_ref = harmonypy.run_harmony(X_pca.values, meta, "donor", max_iter_harmony=20).Z_corr
+if X_pca_harmony_ref.shape != X_pca.shape:
+    X_pca_harmony_ref = X_pca_harmony_ref.T
+rsc.pp.harmony_integrate(adata, key="donor", max_iter_harmony=20)
 
 # Compare against harmonypy reference embedding per PC
 corr = np.array(
