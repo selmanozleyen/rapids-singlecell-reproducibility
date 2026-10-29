@@ -16,10 +16,9 @@ The claim this evidence supports is qualified in six ways, and they are the firs
 3. The declared `numpy.allclose` standard is **not met** by scaling, Pearson residuals,
    normalized dispersions and some outputs measured without a verdict, regression among them
    ([Numerical validation](#numerical-validation)).
-4. The Harmony comparison passes on `flavor="harmony1"`, which is **not** the
-   rapids-singlecell default; the default diverges an order of magnitude further (section 11).
-5. The pinned wheel does not run on V100 at all, so every number comes from A100 or H100
-   (section 5).
+4. Harmony is compared at `flavor="harmony2"`, the rapids-singlecell default, against harmonypy
+   2, which implements the same algorithm (section 11).
+5. Every number comes from A100 or H100 (section 5).
 6. Nothing runs any of this automatically. It is point-in-time evidence, not a regression
    guard (section 6).
 
@@ -324,8 +323,8 @@ and it should be respecified or dropped rather than left to decide a verdict by 
 other quantities that moved are near-threshold stochastic overlaps and float noise at 1e-10 or
 below.
 
-Those two runs used harmonypy 0.2.0. The committed `EVIDENCE.md` is a later run with the versions
-`pyproject.toml` pins, on a full A100 80GB.
+Those two runs used an earlier environment. The committed `EVIDENCE.md` is a later run with the
+versions `pyproject.toml` pins, on a full A100 80GB.
 
 The suite also gates only on _differences_. Absolute quality scores of a single implementation —
 UMAP trustworthiness, per-backend annotation accuracy, per-backend cell-type NMI — are recorded as
@@ -400,19 +399,19 @@ backstop at all.
 
 ### 4. Upstream issues, and exactly where each one is
 
-None of these are patched in this repository. Line numbers are scanpy 1.12.3 and squidpy 1.8.3.
+None of these are patched in this repository. Line numbers are scanpy 1.13.0a2 and squidpy 1.8.3.
 
 **scanpy — a real bug, in one word.** `scanpy/neighbors/_common.py`:
 
 ```python
 def _has_self_column(indices, distances) -> bool:
     # some algorithms have some messed up reordering.
-    return (indices[:, 0] == np.arange(indices.shape[0])).any()      # line 22
+    return (indices[:, 0] == np.arange(indices.shape[0])).any()      # line 114
 
 def _remove_self_column(indices, distances):
     if not _has_self_column(indices, distances):
         raise AssertionError("The first neighbor should be the cell itself.")
-    return indices[:, 1:], distances[:, 1:]                          # line 32
+    return indices[:, 1:], distances[:, 1:]                          # line 124
 ```
 
 `_has_self_column` reduces with **`.any()`**, so one row with self in column 0 satisfies it for the
@@ -420,7 +419,7 @@ whole matrix — then `_remove_self_column` slices column 0 off **every** row un
 row where self is _not_ first, that column is a genuine nearest neighbour, and dropping it leaves
 self occupying a slot further right. The row silently ends up with `n_neighbors - 2` real
 neighbours and distances shifted one place outward. The docstring of
-`_get_sparse_matrix_from_indices_distances` (line 43) states the invariant that does not hold:
+`_get_sparse_matrix_from_indices_distances` (line 127) states the invariant that does not hold:
 "it verifies that the first column is the cell itself".
 
 Self is not first exactly when the data holds exact duplicate rows and the tie-break at distance 0
@@ -469,12 +468,11 @@ space where most cells have an exact distance tie at the k-th neighbour (counts 
 
 ### 5. GPU hardware and portability
 
-**The pinned wheel does not run on every GPU.** `rapids-singlecell-cu12==0.16.1` fails on V100
-(sm_70): two runs reached CUDA and then died inside preprocessing kernels with `named symbol not
-found`. A100 and H100 hosts run the same code fine. This is an architecture-coverage gap in the
-build, and it is the one finding that directly undercuts reproducibility: a third party cannot
-reproduce these results on arbitrary GPU hardware. The container pins the software environment; it
-does not close this gap.
+**The pinned wheels do not run on every GPU.** With the earlier `rapids-singlecell-cu12==0.16.1`,
+two V100 (sm_70) runs reached CUDA and then died inside preprocessing kernels with `named symbol not
+found`; A100 and H100 hosts ran the same code fine. The current CUDA 13 wheels ship no sm_70 code at
+all, so V100 is out of reach entirely. A third party cannot reproduce these results on arbitrary
+GPU hardware; the container pins the software environment, not this.
 
 **A visible GPU is not always a usable one.** On one run the GPU appeared normally in `nvidia-smi`
 while CUDA returned `cudaErrorNoDevice`, with an unknown MIG state and a request for a GPU reset.
@@ -516,7 +514,7 @@ against changed criteria is the one part of this that could be automated today.
 ### 7. One Methods statement is out of date
 
 The Methods say `rapids_singlecell.ptg.Distance` "currently supports the E-distance metric".
-Version 0.16.1 — the version pinned here and benchmarked in the manuscript — declares nine in
+Version 0.16.1 declares nine in
 `SUPPORTED_METRICS`, each with its own GPU implementation: `edistance` through a CUDA kernel,
 `wasserstein` through Sinkhorn, and seven pseudobulk metrics computed from group mean vectors.
 All nine are compared against pertpy here and agree. The sentence understates the package.
@@ -573,23 +571,23 @@ They are still not the evidence. Nothing runs them (see section 6), they compare
 tolerance and throw the arrays away, and they cover nothing the suite does not measure. Where a
 verdict is wanted, [`EVIDENCE.md`](EVIDENCE.md) is it.
 
-### 11. Harmony has two algorithm flavors, and the default is not the harmonypy one
+### 11. Harmony has two algorithm flavors, and the CPU reference must match
 
-`rsc.pp.harmony_integrate` takes `flavor: Literal["harmony2", "harmony1"] = "harmony2"`. Harmonypy
-implements the harmony1 algorithm, so **the rapids-singlecell default is not the CPU reference's
-algorithm** — comparing them without pinning `flavor` compares two different methods.
+`rsc.pp.harmony_integrate` takes `flavor: Literal["harmony2", "harmony1"] = "harmony2"`. harmonypy
+0.x implements harmony1 and harmonypy 2 implements harmony2, so the flavor and the harmonypy major
+version have to agree, or the comparison measures two algorithms.
 
-Measured once on the harmonypy 3,500-cell donor benchmark (2026-08-23; not part of the suite, so
-not regenerated by a run): worst relative L2 per component was 0.053 both for harmonypy 0.2.0 rerun
-against the repository's stored harmonized file and for rapids-singlecell at `flavor="harmony1"`
-against harmonypy rerun, but 0.523 for rapids-singlecell at its **default** `flavor="harmony2"`.
-The first of those matters: the stored reference is sound, reproduced by harmonypy today to the
-same tolerance the GPU achieves. So the tenfold divergence is the flavor, not drift in the
-reference and not a GPU defect. Both the suite and `harmony/harmony.py` now pin
-`flavor="harmony1"` and both agree; the divergence above is what the unpinned default measured.
+Measured once on the harmonypy 3,500-cell donor benchmark (2026-08-23, harmonypy 0.2.0; not part
+of the suite, so not regenerated by a run): worst relative L2 per component was 0.053 for
+rapids-singlecell at `flavor="harmony1"` against harmonypy, but 0.523 at `flavor="harmony2"`. The
+tenfold divergence was the flavor, not a GPU defect.
 
-Two consequences worth stating. Any Harmony comparison must pin `flavor`, or it silently measures
-algorithm choice — the same failure mode as `sc.tl.leiden` without `flavor` in sections 3 and 12. And the published criterion is a per-component Pearson correlation, which is invariant
+The pinned harmonypy is 2.0.2, the version the benchmarks use, so both the suite and
+`harmony/harmony.py` now run each side at its harmony2 defaults, which match (four clustering
+iterations, tolerances 1e-2 and 1e-3, `alpha=0.2`). The one-method script computes its harmonypy
+reference live instead of reading the stored harmonized file, which is harmonypy 0.x output.
+
+The published criterion is a per-component Pearson correlation, which is invariant
 to a per-component scale factor; relative L2 is not, so it is gated alongside at the threshold
 `harmony/harmony.py` uses, to keep a magnitude difference from passing unseen.
 

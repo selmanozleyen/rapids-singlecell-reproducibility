@@ -19,7 +19,7 @@ from arrays import OUT, capture  # capture is re-exported; the comparison script
 
 
 def package_version(package: str) -> str:
-    candidates = (package, "rapids-singlecell-cu12") if package == "rapids-singlecell" else (package,)
+    candidates = (package, "rapids-singlecell-cu13") if package == "rapids-singlecell" else (package,)
     for candidate in candidates:
         try:
             return version(candidate)

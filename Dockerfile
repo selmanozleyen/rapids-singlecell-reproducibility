@@ -1,6 +1,6 @@
 # CUDA comes from the pinned wheels in uv.lock, so the image needs nothing from the host
 # but the driver: `docker run --gpus all`, or `apptainer run --nv`.
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -11,7 +11,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /repro
 COPY pyproject.toml uv.lock ./
 # Everything else in the lock file resolves to a wheel; bbknn pulls annoy, which has no
-# cp312 wheel and builds from source. APT::Sandbox::User=root keeps apt from dropping to
+# cp313 wheel and builds from source. APT::Sandbox::User=root keeps apt from dropping to
 # `_apt`, which it cannot do under a rootless builder with only one UID to map.
 RUN apt-get -o APT::Sandbox::User=root update \
     && apt-get -o APT::Sandbox::User=root install -y --no-install-recommends g++ \

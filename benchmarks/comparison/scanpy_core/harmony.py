@@ -44,9 +44,7 @@ rsc.pp.harmony_integrate(
     key="donor",
     basis="X_pca",
     adjusted_basis="X_pca_harmony",
-    flavor="harmony1",
     max_iter_harmony=20,
-    max_iter_clustering=20,
     random_state=0,
 )
 rsc.get.anndata_to_CPU(candidate)
@@ -60,7 +58,7 @@ capture(
 
 write_report(
     METHOD,
-    'Harmonypy PBMC 3,500-cell donor benchmark, flavor="harmony1" (not the rsc default)',
+    "Harmonypy PBMC 3,500-cell donor benchmark",
     "iterative",
     [],
     reference_package="harmonypy",
