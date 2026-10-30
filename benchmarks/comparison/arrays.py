@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -39,18 +40,24 @@ def _write(group: zarr.Group, name: str, value) -> None:
         target.attrs["shape"] = list(csr.shape)
         for part in ("data", "indices", "indptr"):
             array = np.ascontiguousarray(getattr(csr, part))
-            _store(target, part, array, (min(len(array), CELL_CHUNK * 64),))
+            _store(target, part, array, (max(1, min(len(array), CELL_CHUNK * 64)),))
         return
     array = np.asarray(value)
     if array.dtype.kind in "OUS":
         array = array.astype(str)
     target.attrs["format"] = "dense"
     target.attrs["shape"] = list(array.shape)
-    _store(target, "values", array, (min(array.shape[0], CELL_CHUNK), *array.shape[1:]))
+    _store(target, "values", array, (max(1, min(array.shape[0], CELL_CHUNK)), *array.shape[1:]))
+
+
+_STARTED: set[str] = set()
 
 
 def capture(method: str, point: str, **arrays) -> None:
     """Store the outputs at one comparison point; `reference` is CPU, `candidate` GPU."""
+    if method not in _STARTED:  # each run of a script starts from an empty store
+        shutil.rmtree(store_path(method), ignore_errors=True)
+        _STARTED.add(method)
     root = zarr.open_group(str(store_path(method)), mode="a")
     point = point.replace("/", "_")  # "/" would nest the point in zarr
     for name, value in arrays.items():

@@ -24,7 +24,10 @@ def dense(value) -> np.ndarray:
 
 
 def _floats(*values) -> tuple[np.ndarray, ...]:
-    return tuple(dense(v).astype(float, copy=False) for v in values)
+    arrays = tuple(dense(v).astype(float, copy=False) for v in values)
+    if len({a.shape for a in arrays}) > 1:
+        raise ValueError(f"shapes differ: {[a.shape for a in arrays]}")
+    return arrays
 
 
 def _labels(value) -> np.ndarray:
@@ -138,7 +141,7 @@ def _row_sets(candidate, reference):
 
 
 def graph_jaccard(candidate, reference) -> float:
-    return float(np.mean([len(x & y) / max(1, len(x | y)) for x, y in _row_sets(candidate, reference)]))
+    return float(np.mean([len(x & y) / len(x | y) if x | y else 1.0 for x, y in _row_sets(candidate, reference)]))
 
 
 # ------------------------------------------------------------------ labels / sets
@@ -163,7 +166,7 @@ def exact_agreement(candidate, reference) -> float:
 def set_jaccard(candidate, reference) -> float:
     """Jaccard overlap of two name sets — gene selections, marker lists."""
     a, b = set(_labels(candidate)), set(_labels(reference))
-    return len(a & b) / max(1, len(a | b))
+    return len(a & b) / len(a | b) if a | b else 1.0
 
 
 def graph_exact_agreement(candidate, reference) -> float:

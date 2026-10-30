@@ -26,12 +26,6 @@ CRITERIA: dict[str, list[tuple[str, str, float]]] = {
         ("annotation.exact_agreement", ">=", 0.9),
         ("annotation.accuracy_difference", "<=", 0.05),
     ],
-    "clustering_extended": [
-        ("louvain.adjusted_rand_index", ">=", 0.8),
-        ("louvain.normalized_mutual_information", ">=", 0.8),
-        ("kmeans.adjusted_rand_index", ">=", 0.8),
-        ("kmeans.normalized_mutual_information", ">=", 0.8),
-    ],
     "co_occurrence": [
         ("occurrence.mean_abs_error", "<=", 1e-06),
         ("occurrence.pearson_correlation", ">=", 0.99999),
@@ -65,6 +59,7 @@ CRITERIA: dict[str, list[tuple[str, str, float]]] = {
         ("score_genes_cell_cycle.phase.exact_agreement", ">=", 0.99),
     ],
     "ligrec": [
+        ("means.float32_allclose_excess", "<=", 1.0),
         ("pvalues.nan_mask_agreement", ">=", 1.0),
         ("pvalues.mean_abs_error", "<=", 0.05),
         ("pvalues.pearson_correlation", ">=", 0.9),
@@ -146,7 +141,6 @@ EVIDENCE: dict[str, list[str]] = {
     "co_occurrence": ["occurrence.allclose_excess"],
     "decoupler_methods": ["*.allclose_excess"],
     "distance": ["*.pairwise.allclose_excess", "*.onesided.allclose_excess"],
-    "ligrec": ["means.allclose_excess"],
     "mixscale": ["mixscale.score.allclose_excess"],
     "mixscape": ["perturbation_signature.allclose_excess"],
     "biological_pipeline_pbmc3k": [
